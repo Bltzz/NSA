@@ -1,5 +1,5 @@
 # NSA
-NSA project at Epitech pc1,2,3
+NSA project at Epitech pc1 (aka. ro1), 2(aka. www and service), 3 (aka ro2)
 
 Maintainer: jonas.pfaff@epitech.eu
 
