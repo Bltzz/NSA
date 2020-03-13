@@ -1,0 +1,77 @@
+##################################################
+## EPITECH PROJECT, 2019                        ##
+## Network and System Andministration           ##
+## File description:                            ##
+## manual for setup www                         ##
+## used VirtualBox - if you are using Fedora,   ##
+## download the official rpm from VirtualBox.   ##
+## the dnf/ yum packages are broken for some V. ##
+##                                              ##
+## Note: The Client MUST contain a GUI for test ##
+## purposes!                                    ##
+## no warranty for any information              ##
+##                                              ##
+## Maintainer: Jonas.pfaff@epitech.eu           ##
+##################################################
+
+All steps with sudo permissions e.g. in root
+I assume that the machines are named as Follows:
+    IP              |       name
+    192.168.1.1 &   |       ro1
+    208.97.50.1
+    192.168.1.254 & |       ro2
+    192.168.42.1
+    192.168.1.10    |       www
+    192.168.1.11    |       service
+    192.168.42.10   |       intra
+
+
+1. Step
+IMPORTANT: Add a NAT card first, if you have no connection to your Ro1. Otherwise you cannot reach the internet!
+    Add a virtual Machine with Arch Linux ISO on your VM.
+    Change Network Setting of the VM:
+        -> 1 Bridged Adapter (ethernet)
+
+2. Step
+    Install a persistent ArchLinux (hardest part of the whole thing)
+        Follow the instructions on this web page:
+            https://www.forbes.com/sites/jasonevangelho/2019/06/10/arch-linux-os-challenge-2-alternatives-install-gui-script-easy/#2c16defd4d94
+            Be carefull to change the setting (or password) for Disk Encription and your root and user/password.
+            Change Language setting from spanish to yours. (language, keyboard, ...)
+
+3. Step
+    Apply the Network
+        ->  pacman -S netctl
+        ->  pacman -S nano
+        ->  pacman -S iptables
+
+
+        cp /etc/netctl/examples/ethernet-static /etc/netctl/enp0s3
+        ->  nano /etc/netctl/enp0s3
+                Description='blablabla'
+                Interface=enp0s3
+                Connection=ethernet
+                IP=static
+                Address=('192.168.1.10/24')
+                Gateway=('192.168.1.1')
+                DNS=('192.168.1.11') #add 8.8.8.8 if you dont have a DNS.
+                # ignore IPv6
+
+        ->  netctl enable enp0s3
+        ->  netctl start enp0s3
+        ->  ifconfig (if it works)
+        ->  ip addr
+        ->  reboot now
+        ->  ip address add 192.168.1.10/24 broadcast + dev enp0s3
+        ->  ip route add default vis 192.168.1.1
+
+    ->  nano /etc/dhcpd.conf
+        interface enp0s3
+        static ip_address=192.168.1.10/24
+        static domain_name_server=192.168.1.11
+        static gateway=192.168.1.1
+
+    install Apache2, follow online tutorials - it's quite easy :)
+    setup the admin.nameofyourchoice.com and nameofyourchoice.com part and write a very short HTML FIle. content doesn't matter
+
+    install the password protection part and your are done. Test with Client with GUI.

@@ -1,0 +1,112 @@
+##################################################
+## EPITECH PROJECT, 2019                        ##
+## Network and System Andministration           ##
+## File description:                            ##
+## manual for setup ro1                         ##
+## used VirtualBox - if you are using Fedora,   ##
+## download the official rpm from VirtualBox.   ##
+## the dnf/ yum packages are broken for some V. ##
+##                                              ##
+## Note: The Client MUST contain a GUI for test ##
+## purposes!                                    ##
+##                                              ##
+## no warranty for any information              ##
+##                                              ##
+## Maintainer: Jonas.pfaff@epitech.eu           ##
+##################################################
+
+All steps with sudo permissions e.g. in root
+I assume that the machines are named as Follows:
+    IP              |       name
+    192.168.1.1 &   |       ro1
+    208.97.50.1
+    192.168.1.254 & |       ro2
+    192.168.42.1
+    192.168.1.10    |       www
+    192.168.1.11    |       service
+    192.168.42.10   |       intra
+
+
+1. Step
+    Add a virtual Machine with Debian ISO on your VM.
+    Change Network Setting of the VM:
+        -> 1 NAT adapter (wifi card)
+        -> 2 Bridged Adapter (ethernet)
+    Start the VM and install Debian WITHOUT GUI
+
+2. Step
+    Check your network with `ip a` command
+    Try to ping 8.8.8.8 and google.com
+
+3. Step
+    Install net-tools (apt-get install net-tools)
+    Install isc-dhcp-server
+    Install iptables-persistent
+
+    Enable IP Forwarding by editing
+        nano /etc/sysctl.conf
+        net.ipv4.ip_forward=1
+    Edit /etc/network/interfaces
+        [...]
+        #The primary Network interface, replace enp0s$ with the names of your interfaces
+        auto enp0s3
+        iface enp0s3 inet dhcp
+
+        # interface for Client network
+        auto enp0s8
+        iface enp0s8 inet static
+            address 208.97.50.1
+            netmask 255.255.255.0
+            network 208.97.0.0
+            #post up probably not neccessary...
+            post-up route add -net 208.97.0.0 netmask 255.255.0.0 gw 208.97.50.1
+
+        auto enp0s9
+        iface enp0s9 inet static
+            address 192.168.1.1
+            netmask 255.255.255.0
+            network 192,168.1.0
+            post-up route add -net 192.168.42.0 netmask 255.255.255.0 gw 192.168.1.254
+    Check if everything works:
+        -> systemctl restart networking
+        -> systemctl status networking
+        -> ifconfig
+
+    Config DHCP Server:
+        nano /etc/default/isc-dhcp-server
+            ->  INTERFACESv4="enp0s8"
+            ->  INTERFACESv6=""
+        nano /etc/shcp/dhcpd.conf
+            ->  option domain-name "nameofyourchoice.com";
+        #if you do this you will not be able to connect to the internet anymore (except your DNS is runnig and connected)
+        # To prevent this you can add 8.8.8.8 as name-server.
+            ->  option domain-name-servers 192.168.1.11;
+        [...]
+            ->  subnet 208.97.0.0 netmask 255.255.0.0 {
+                    range 208.97.0.1 208.97.50.0;
+                    option routers 208.97.50.1;
+                }
+            ->  host ro2 {
+                    fixed-address 192.168.1.254;
+                }
+        retart networking and isc-dhcp-server
+        check status of both
+        try ping 8.8.8.8 to see if internet is working at all, ping google.com (NOTE: should only work if your DNS is working)
+
+    Add peristent IP tables rules
+        # Masquerade everything outgoing:
+        ->  iptables -t nat -A POSTROUTING -o enp0s3 -j MASQUERADE
+        ->  netfilter-persistent save
+        ->  Reboot to see if everything is persistent
+        ->  iptables -A FORWARD -o enp0s9 -j ACCEPT
+        ->  iptables -A FORWARD -i enp0s9 -j ACCEPT
+        ->  iptables -A FORWARD -o enp0s8 -j ACCEPT
+        ->  iptables -A FORWARD -i enp0s8 -j ACCEPT
+        ->  netfilter-persistent save
+        ->  Reboot to see if everything is persistent
+        ->  iptables -L to see the thing you have done
+        route -n should give you something simmilar like in ro1_route_n_result.png. If not, add the rules manually :)
+
+reboot again and check if everything still works.
+
+Have fun :)

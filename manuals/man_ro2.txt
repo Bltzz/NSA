@@ -1,0 +1,78 @@
+##################################################
+## EPITECH PROJECT, 2019                        ##
+## Network and System Andministration           ##
+## File description:                            ##
+## manual for setup ro2                         ##
+## used VirtualBox - if you are using Fedora,   ##
+## download the official rpm from VirtualBox.   ##
+## the dnf/ yum packages are broken for some V. ##
+##                                              ##
+## Note: The Client MUST contain a GUI for test ##
+## purposes!                                    ##
+##                                              ##
+## no warranty for any information              ##
+##                                              ##
+## Maintainer: Jonas.pfaff@epitech.eu           ##
+##################################################
+
+All steps with sudo permissions e.g. in root
+I assume that the machines are named as Follows:
+    IP              |       name
+    192.168.1.1 &   |       ro1
+    208.97.50.1
+    192.168.1.254 & |       ro2
+    192.168.42.1
+    192.168.1.10    |       www
+    192.168.1.11    |       service
+    192.168.42.10   |       intra
+
+
+1. Step
+IMPORTANT: Add a NAT card first, if you have no connection to your Ro1. Otherwise you cannot reach the internet!
+    Add a virtual Machine with Debian ISO on your VM.
+    Change Network Setting of the VM:
+        -> 2 Bridged Adapter (ethernet)
+    Start the VM and install Debian WITHOUT GUI
+
+2. Step
+    Check your network with `ip a` command
+    Try to ping 8.8.8.8 and google.com
+
+
+3. Step
+    Install net-tools (apt-get install net-tools)
+    Install iptables-persistent
+
+    Enable IP Forwarding by editing
+        nano /etc/sysctl.conf
+        net.ipv4.ip_forward=1
+    Edit /etc/network/interfaces
+        [...]
+        #The primary Network interface, replace enp0s$ with the names of your interfaces
+        # If you have NAT configured, dont change this interface. If you remove the NAT adapter you might edit this file again and merge everything :)
+        auto enp0s3
+        iface enp0s3 inet static
+            address 192.168.1.254
+            network 192.168.1.0
+            netmask 255.255.255.0
+            gateway 192.168.1.1
+
+        auto enp0s8
+        iface enp0s8 inet static
+            address 192.168.42.1
+            network 192.168.42.0
+            netmask 255.255.255.0
+
+    ->  systemctl restart networking
+    ->  systemctl status networking
+    Create IP tables:
+        ->  iptables -A FORWARD -i enp0s3 -o enp0s8 -j ACCEPT
+        ->  iptables -A FORWARD -i enp0s8 -o enp0s3 -j ACCEPT
+        ->  iptables -A POSTROUTING -p tcp 192.168.42.10 --dport 80 -j SNAT --to-source 192.168.1.254
+        ->  netfilter-persistent save
+    Edit /etc/iptavles/rules.v4
+        Should look similar to ro2_rules_v4.png (I'm sure that there are way to many rules but it works for me)
+        ->  reboot
+
+Check in your group if everything works - maybe there are some routes missing...
+You can check this for example with tcpdump

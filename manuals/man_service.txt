@@ -1,0 +1,87 @@
+##################################################
+## EPITECH PROJECT, 2019                        ##
+## Network and System Andministration           ##
+## File description:                            ##
+## manual for setup service                     ##
+## used VirtualBox - if you are using Fedora,   ##
+## download the official rpm from VirtualBox.   ##
+## the dnf/ yum packages are broken for some V. ##
+##                                              ##
+## Note: The Client MUST contain a GUI for test ##
+## purposes!                                    ##
+##                                              ##
+## no warranty for any information              ##
+##                                              ##
+## Maintainer: Jonas.pfaff@epitech.eu           ##
+##################################################
+
+All steps with sudo permissions e.g. in root
+I assume that the machines are named as Follows:
+    IP              |       name
+    192.168.1.1 &   |       ro1
+    208.97.50.1
+    192.168.1.254 & |       ro2
+    192.168.42.1
+    192.168.1.10    |       www
+    192.168.1.11    |       service
+    192.168.42.10   |       intra
+
+
+1. Step
+IMPORTANT: Add a NAT card first, if you have no connection to your Ro1. Otherwise you cannot reach the internet!
+    Add a virtual Machine with Ubuntu ISO on your VM.
+    During the installation you will be asked to either use static ip addresses or to get them dynaically -> add the ip address manually!
+    Change Network Setting of the VM:
+        -> 1 Bridged Adapter (ethernet)
+
+2. Step
+    Check your network with `ip a` command
+    Try to ping 8.8.8.8 and google.com
+
+3. Step
+    install bind9
+    ->  nano /etc/bind/named.conf.local
+            zone "nameofyourchoice.com" {
+                type master;
+                file "/etc/bind/zones/db.nameofyourchoice.com";
+                forwarders{8.8.8.8;};
+                allow-transfer{any;}; #instead of any you should use the subnets that should be able to send querys to the DNS.
+            };
+
+            zone "168.192.in-addr.arpa" {
+                type master;
+                notify no;
+                file "/etc/bind/zones/db.192.168";
+                forwarders{8.8.8.8;};
+                allow-transfer{any;};
+            };
+    ->  mkdir /etc/bind/zones
+    -> nano /etc/bind/zones/db.nameofyourchoice.com
+            fill in the stuff from zones_nameofyourchoice.png (replace whatever.com with your domain name)
+    -> nano /etc/bind/zones/db.192.168
+            fill in the stuff from reverse_zones_DNS.png (replace whatever.com with your domain name)
+    #Note: MX is not tested yet, so no idea if it works.
+    -> check zones:
+        -> named-checkzone nameofyourchoice.com zones/db.192.168
+        # for all combinations
+    ->  if everything works fine:
+        -> systemctl restart bind9
+        -> systemctl status bind9
+    ->  nano /etc/bind/named.conf.options
+            # insert in options:
+            allow-query{
+                192.168.1.0/24;
+                192.168.42.0/24;
+                208.97.0.0/16;
+            };
+            forwarders{
+                8.8.8.8;
+            };
+            #They should already be enabled:
+            dnssec-validation auto;
+            listen-on-v6 {any;};
+
+
+# For Samba: Install Samba, **write a script**(!) that creates a new Samba User with 100MB Disk space
+# that is password protected. (The password that is used for the user).
+# Public space should be accessible by anyone without Credentials.
